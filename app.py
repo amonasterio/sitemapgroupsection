@@ -84,7 +84,7 @@ def addColumnsDataFrame(sitemap_df,f_fecha_url,nivel_cat):
                         axis=1)
     else:
         st.warning("No ha seleccionado el formato de fecha adecuado")
-        sitemap_df['fecha']='Error'
+        sitemap_df['fecha']=''
     #Obtenemos el campo path a partir de la URL
     sitemap_df['path']=sitemap_df.apply(lambda x: getPathUrl(x['loc'],nivel_cat), 
                         axis=1)
@@ -106,10 +106,11 @@ if len(sitemap_url)>0:
         nivel=st.slider('Profundidad del path que identifica la categoría cuyos datos quedemos agrupar', 1, 5, 2)
         #obtenemos fechas y categorías a agrupar. Lo asignamos a otra variable para evitar mutaciones
         deep_copy = sitemap_df.copy()
-        sitemap_nuevo = addColumnsDataFrame(deep_copy,f_fecha_url,nivel)
-        
+        df_nuevo = addColumnsDataFrame(deep_copy,f_fecha_url,nivel)
+        #eliminamos resultados con fechas vacías
+        df_nuevo.drop(df_nuevo[df_nuevo.fecha == ''].index, inplace=True)
         #Calculamos los valores agrupados
-        df_agrupado=sitemap_nuevo.groupby(['fecha', 'path'],as_index=False).size()
+        df_agrupado=df_nuevo.groupby(['fecha', 'path'],as_index=False).size()
         st.dataframe(df_agrupado)
         st.download_button(
             label="Descargar como CSV",
