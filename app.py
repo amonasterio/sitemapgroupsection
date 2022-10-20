@@ -4,7 +4,7 @@ import pandas as pd
 from urllib.parse import unquote, urlparse
 from pathlib import  PurePosixPath
 import re
-import datetime
+from datetime import date, timedelta
 
 st.set_page_config(
    page_title="Obtener datos de categorías de URL publicadas en sitemap"
@@ -122,12 +122,15 @@ if len(sitemap_url)>0:
                 mime='text/csv'
                 )
         st.subheader('Obtener datos por fechas:')
+        today = date.today()
+        hace_un_mes = today - timedelta(days=30)
         inicio= str(st.date_input(
         "Fecha inicial",
-        datetime.date(2022, 10, 1)))
+        hace_un_mes))
         fin=str(st.date_input(
         "Fecha final",
-        datetime.date(2022, 10, 1)))
+        today))
+
 
         #Formato de fecha que utilizaremos para filtrar
         FORMATO_FECHA_FILTRO='%Y-%m-%d'
