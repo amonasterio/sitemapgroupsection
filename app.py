@@ -98,6 +98,12 @@ if len(sitemap_url)>0:
     sitemap_df=procesarSitemap(sitemap_url)
     st.text("Elementos del sitemap cargado")
     st.dataframe(sitemap_df)
+    st.download_button(
+                label="Descargar como CSV",
+                data=sitemap_df.to_csv(index=False).encode('utf-8'),
+                file_name='sitemap.csv',
+                mime='text/csv'
+                )
     #formato de fecha en la URL
     f_fecha_url = st.radio(
         'Selecciona el formato de fecha que se muestra en la URL',
