@@ -4,8 +4,8 @@ import pandas as pd
 from urllib.parse import unquote, urlparse
 from pathlib import  PurePosixPath
 import re
-import datetime
 from datetime import date, timedelta
+import datetime
 
 st.set_page_config(
    page_title="Obtener datos de categorías de un listado de URL"
@@ -77,6 +77,17 @@ def checkFormatoFecha(df,formato):
         ok=True
     return ok
 
+#Devuelve el último día de un mes    
+def getLastDayOfMonth(month,year):
+    d = datetime.date(year + int(month/12), month%12+1, 1)-datetime.timedelta(days=1)
+    return d
+
+#Devuelve el primer día del mes anterior
+def getFirstDayPreviousMonth():
+    today = date.today()
+    last_month = (today - timedelta(days=today.day)).replace(day=1)
+    return last_month
+
 csv=uploaded_file = st.file_uploader("Fichero con el listado de URL", type='csv')
 if uploaded_file is not None:
     df = pd.read_csv(uploaded_file)
@@ -100,14 +111,15 @@ if uploaded_file is not None:
                 mime='text/csv'
                 )
         st.subheader('Obtener datos por fechas:')
-        today = date.today()
-        hace_un_mes = today - timedelta(days=30)
+        
+        f_inicio = getFirstDayPreviousMonth()
+        f_fin=getLastDayOfMonth(f_inicio.month,f_inicio.year)
         inicio= str(st.date_input(
         "Fecha inicial",
-        hace_un_mes))
+        f_inicio))
         fin=str(st.date_input(
         "Fecha final",
-        today))
+        f_fin))
 
         #Formato de fecha que utilizaremos para filtrar
         FORMATO_FECHA_FILTRO='%Y-%m-%d'
