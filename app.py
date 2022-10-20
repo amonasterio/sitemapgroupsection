@@ -14,6 +14,35 @@ st.title("Obtener datos de categorías de URL publicadas en sitemap")
 #Variedad de formatos de fechas
 L_F_FECHAS=['/YYYY/MM/DD/', '/YYYYMMDD/']
 
+@st.cache
+def procesarSitemap(url):
+    sitemap_df = adv.sitemap_to_df(url)
+    return sitemap_df
+
+#Valida el formato de fecha
+def checkFormatoFecha(df,formato):
+    ok=False
+    #Si el formato de fecha es año, mes y día separados en distintos paths
+    if formato==L_F_FECHAS[0]:
+        reg_ex="/\d\d\d\d/\d\d/\d\d/" 
+     #Si el formato de fecha es año, mes y día en el mismo path
+    else:
+         reg_ex=r"/\d\d\d\d\d\d\d\d/" 
+    cont=0
+    cont=df['loc'].str.count(reg_ex).sum()
+    if cont>0:
+        ok=True
+    return ok
+
+#Añadimos columnas con la fecha y la categoría de la quequeremos obtener el volumen de URL publicadas
+def addColumnsDataFrame(sitemap_df,f_fecha_url,nivel_cat):
+    sitemap_df['fecha']=sitemap_df.apply(lambda x: getFechaUrl(x['loc'],f_fecha_url), 
+                        axis=1)
+    #Obtenemos el campo path a partir de la URL
+    sitemap_df['path']=sitemap_df.apply(lambda x: getPathUrl(x['loc'],nivel_cat), 
+                        axis=1)
+    return sitemap_df
+
 #Devuelve el nombre del path de la URL que esté al nivel que le pasemos
 def getPathUrl(url,nivel):
     ruta=''
@@ -53,71 +82,39 @@ def getFechaUrl(url,formato_fecha):
             fecha=str(partes[pos])
     return fecha
 
-#Pasamos el sitemap recibido a DataFrame 
-@st.cache
-def procesarSitemap(url):
-    sitemap_df = adv.sitemap_to_df(url)
-    return sitemap_df
-
-#Valida el formato de fecha
-def checkFormatoFecha(df,formato):
-    ok=False
-    #Si el formato de fecha es año, mes y día separados en distintos paths
-    if formato==L_F_FECHAS[0]:
-        reg_ex="/\d\d\d\d/\d\d/\d\d/" 
-     #Si el formato de fecha es año, mes y día en el mismo path
-    else:
-         reg_ex=r"/\d\d\d\d\d\d\d\d/" 
-    cont=0
-    cont=df['loc'].str.count(reg_ex).sum()
-    if cont>0:
-        ok=True
-    return ok
-
-
-
 #Añadimos columnas con la fecha y la categoría de la quequeremos obtener el volumen de URL publicadas
 def addColumnsDataFrame(sitemap_df,f_fecha_url,nivel_cat):
-    ok=checkFormatoFecha(sitemap_df,f_fecha_url)
-    if ok:
-        sitemap_df['fecha']=sitemap_df.apply(lambda x: getFechaUrl(x['loc'],f_fecha_url), 
+    sitemap_df['fecha']=sitemap_df.apply(lambda x: getFechaUrl(x['loc'],f_fecha_url), 
                         axis=1)
-    else:
-        st.warning("No ha seleccionado el formato de fecha adecuado")
-        sitemap_df['fecha']=''
     #Obtenemos el campo path a partir de la URL
     sitemap_df['path']=sitemap_df.apply(lambda x: getPathUrl(x['loc'],nivel_cat), 
                         axis=1)
     return sitemap_df
 
+sitemap_df=None
 sitemap_url=st.text_input('Ruta del sitemap','')
 
 if len(sitemap_url)>0:
-    #Pasamos el sitemap a DataFrame 
-    sitemap_df = procesarSitemap(sitemap_url)
-
-    if sitemap_df is not None:
-        st.text("Elementos del sitemap cargado")
-        st.dataframe(sitemap_df)
-        #formato de fecha en la URL
-        f_fecha_url = st.radio(
-            'Selecciona el formato de fecha que se muestra en la URL',
-            (L_F_FECHAS))
+    sitemap_df=procesarSitemap(sitemap_url)
+    st.text("Elementos del sitemap cargado")
+    st.dataframe(sitemap_df)
+    #formato de fecha en la URL
+    f_fecha_url = st.radio(
+        'Selecciona el formato de fecha que se muestra en la URL',
+        (L_F_FECHAS))
+    if checkFormatoFecha(sitemap_df,f_fecha_url):
         nivel=st.slider('Profundidad del path que identifica la categoría cuyos datos quedemos agrupar', 1, 5, 2)
-        #obtenemos fechas y categorías a agrupar. Lo asignamos a otra variable para evitar mutaciones
         deep_copy = sitemap_df.copy()
         df_nuevo = addColumnsDataFrame(deep_copy,f_fecha_url,nivel)
-        #eliminamos resultados con fechas vacías
-        df_nuevo.drop(df_nuevo[df_nuevo.fecha == ''].index, inplace=True)
         #Calculamos los valores agrupados
         df_agrupado=df_nuevo.groupby(['fecha', 'path'],as_index=False).size()
         st.dataframe(df_agrupado)
         st.download_button(
-            label="Descargar como CSV",
-            data=df_agrupado.to_csv(index=False).encode('utf-8'),
-            file_name='agrupados.csv',
-            mime='text/csv'
-            )
+                label="Descargar como CSV",
+                data=df_agrupado.to_csv(index=False).encode('utf-8'),
+                file_name='agrupados.csv',
+                mime='text/csv'
+                )
         st.subheader('Obtener datos por fechas:')
         inicio= str(st.date_input(
         "Fecha inicial",
@@ -136,8 +133,10 @@ if len(sitemap_url)>0:
         df_final=filtered_df.groupby(['path'],as_index=False).sum()
         st.dataframe(df_final)
         st.download_button(
-            label="Descargar como CSV",
-            data=df_final.to_csv(index=False).encode('utf-8'),
-            file_name=inicio+"_"+fin+'.csv',
-            mime='text/csv'
-            )
+                label="Descargar como CSV",
+                data=df_final.to_csv(index=False).encode('utf-8'),
+                file_name=inicio+"_"+fin+'.csv',
+                mime='text/csv'
+                )
+    else:
+        st.warning("No ha seleccionado el formato de fecha adecuado")  
